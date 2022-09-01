@@ -48,10 +48,8 @@ namespace SmokeTest
                 while (stream.DataAvailable)
                 {
                     int read = await stream.ReadAsync (buffer, ct);
-                    if (read == 0)
-                        break;
-
-                    await mem.WriteAsync (buffer, 0, read, ct);
+                    if (read > 0)
+                        await mem.WriteAsync (buffer, 0, read, ct);
                 }
 
                 return mem.ToArray ();
