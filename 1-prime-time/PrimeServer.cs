@@ -89,6 +89,7 @@ namespace SmokeTest
             StreamWriter sw = new StreamWriter (client.GetStream ());
             var prime = isPrime ? "true" : "false";
             var response = $"{{ \"method\": \"isPrime\", \"prime\": \"{prime}\" }}";
+            Trace.WriteLine ($"> {respojse}");
             await sw.WriteLineAsync (response);
             await sw.FlushAsync ();
         }
