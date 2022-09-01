@@ -52,7 +52,8 @@ namespace SmokeTest
             {
                 Trace.WriteLine ($"> [ERROR] {ex}");
             }
-
+        }
+        
         readonly IPEndPoint _endpoint;
     }
 }
