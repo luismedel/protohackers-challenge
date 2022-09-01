@@ -150,6 +150,8 @@ namespace SmokeTest
                 if (line == null)
                     yield break;
 
+                Trace.WriteLine ($"> {line}");
+
                 JsonDocument? result = null;
                 try { result = JsonDocument.Parse (line); }
                 catch { }
