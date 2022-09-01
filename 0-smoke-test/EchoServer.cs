@@ -46,8 +46,7 @@ namespace SmokeTest
                 int read = await stream.ReadAsync (buffer, ct);
                 Trace.WriteLine ($"> Received {read} bytes from {client.Client.RemoteEndPoint}");
                 Trace.WriteLine ($"> [{BitConverter.ToString (buffer, 0, read)}]");
-                if (read > 0)
-                    await stream.WriteAsync (buffer, 0, read);
+                await stream.WriteAsync (buffer, 0, read);
             }
         }
 
