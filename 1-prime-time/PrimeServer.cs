@@ -33,7 +33,8 @@ namespace SmokeTest
                     if (IsValidJson (record))
                     {
                         Trace.WriteLine ($"Sending response to {client.Client.RemoteEndPoint}...");
-                        await SendResponse (client, record!.RootElement.GetProperty ("number").GetDouble (), ct);
+                        var n = record!.RootElement.GetProperty ("number").GetDouble ();
+                        await SendResponse (client, IsPrime(n), ct);
                     }
                     else
                     {
@@ -83,10 +84,10 @@ namespace SmokeTest
             return result;
         }
 
-        async Task SendResponse (TcpClient client, double number, CancellationToken ct)
+        async Task SendResponse (TcpClient client, bool isPrime, CancellationToken ct)
         {
             StreamWriter sw = new StreamWriter (client.GetStream ());
-            var prime = IsPrime (number) ? "true" : "false";
+            var prime = isPrime ? "true" : "false";
             await sw.WriteLineAsync ($"{{ \"method\": \"isPrime\", \"prime\": \"{prime}\" }}");
             await sw.FlushAsync ();
         }
@@ -100,37 +101,44 @@ namespace SmokeTest
 
         bool IsValidJson (JsonDocument? json)
         {
-            if (json == null)
+            try
             {
-                Trace.WriteLine ("> Non json.");
+                if (json == null)
+                {
+                    Trace.WriteLine ("> Non json.");
+                    return false;
+                }
+
+                if (!json.RootElement.TryGetProperty ("method", out var method))
+                {
+                    Trace.WriteLine ("> Missing 'method' member.");
+                    return false;
+                }
+
+                if (!method.ValueEquals ("isPrime"))
+                {
+                    Trace.WriteLine ("> method != 'isPrime'.");
+                    return false;
+                }
+
+                if (!json.RootElement.TryGetProperty ("number", out var number))
+                {
+                    Trace.WriteLine ("> Missing 'number' member.");
+                    return false;
+                }
+
+                if (!number.TryGetDouble (out var _))
+                {
+                    Trace.WriteLine ("> Not a valid number.");
+                    return false;
+                }
+
+                return true;
+            }
+            catch
+            {
                 return false;
             }
-
-            if (!json.RootElement.TryGetProperty ("method", out var method))
-            {
-                Trace.WriteLine ("> Missing 'method' member.");
-                return false;
-            }
-
-            if (!method.ValueEquals ("isPrime"))
-            {
-                Trace.WriteLine ("> method != 'isPrime'.");
-                return false;
-            }
-
-            if (!json.RootElement.TryGetProperty ("number", out var number))
-            {
-                Trace.WriteLine ("> Missing 'number' member.");
-                return false;
-            }
-
-            if (!number.TryGetDouble (out var _))
-            {
-                Trace.WriteLine ("> Not a valid number.");
-                return false;
-            }
-
-            return true;
         }
 
         static async IAsyncEnumerable<JsonDocument?> ReadRecords (TcpClient client, [EnumeratorCancellation] CancellationToken ct)
@@ -145,6 +153,7 @@ namespace SmokeTest
                 JsonDocument? result = null;
                 try { result = JsonDocument.Parse (line); }
                 catch { }
+
                 yield return result;
             }
         }

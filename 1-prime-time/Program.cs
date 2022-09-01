@@ -16,12 +16,13 @@ namespace SmokeTest
 
             [Option ('p', "port", Required = false, Default = 7777, HelpText = "Port")]
             public int Port { get; set; }
+
+            [Option ("trace", Required = false, Default = false, HelpText = "Show trace")]
+            public bool Trace { get; set; }
         }
 
         static void Main (string[] args)
         {
-            Trace.Listeners.Add (new ConsoleTraceListener ());
-
             Parser.Default
                   .ParseArguments<Options> (args)
                   .WithParsed<Options> (Run);
@@ -29,6 +30,9 @@ namespace SmokeTest
 
         static void Run (Options o)
         {
+            if (o.Trace)
+                Trace.Listeners.Add (new ConsoleTraceListener ());
+
             using (var cts = new CancellationTokenSource ())
             {
                 var ct = cts.Token;
@@ -51,22 +55,22 @@ namespace SmokeTest
                 PrimeServer server = new PrimeServer (addr, port);
                 try
                 {
-                    Trace.WriteLine ($"Binding server to {addr}:{port}...");
+                    Console.WriteLine ($"Binding server to {addr}:{port}...");
                     var awaiter = server.Run (ct).GetAwaiter ();
                     awaiter.GetResult ();
                 }
                 catch (OperationCanceledException)
                 {
-                    Trace.WriteLine ($"Cancel requested.");
+                    Console.WriteLine ($"Cancel requested.");
                 }
                 catch (Exception ex)
                 {
-                    Trace.WriteLine ($"Error encountered: {ex.Message}");
+                    Console.WriteLine ($"Error encountered: {ex.Message}");
                     throw;
                 }
                 finally
                 {
-                    Trace.WriteLine ($"Server closed.");
+                    Console.WriteLine ($"Server closed.");
                 }
             }, ct);
             t.Start ();
