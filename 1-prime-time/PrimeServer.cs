@@ -95,7 +95,7 @@ namespace SmokeTest
         async Task SendMalformedResponse (TcpClient client, CancellationToken ct)
         {
             StreamWriter sw = new StreamWriter (client.GetStream ());
-            await sw.WriteLineAsync ("{ \"error\": \"malformed request\" }");
+            await sw.WriteLineAsync ("malformed request");
             await sw.FlushAsync ();
         }
 
