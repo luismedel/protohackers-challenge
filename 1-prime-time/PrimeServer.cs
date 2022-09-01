@@ -88,7 +88,8 @@ namespace SmokeTest
         {
             StreamWriter sw = new StreamWriter (client.GetStream ());
             var prime = isPrime ? "true" : "false";
-            await sw.WriteLineAsync ($"{{ \"method\": \"isPrime\", \"prime\": \"{prime}\" }}");
+            var response = $"{{ \"method\": \"isPrime\", \"prime\": \"{prime}\" }}";
+            await sw.WriteLineAsync (response);
             await sw.FlushAsync ();
         }
 
@@ -158,11 +159,6 @@ namespace SmokeTest
 
                 yield return result;
             }
-        }
-
-        static async Task SendData (TcpClient client, byte[] data, CancellationToken ct)
-        {
-            await client.GetStream ().WriteAsync (data, ct);
         }
 
         readonly IPEndPoint _endpoint;
