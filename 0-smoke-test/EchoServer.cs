@@ -47,7 +47,7 @@ namespace SmokeTest
 
                 while (client.Connected && stream.DataAvailable)
                 {
-                    int read = await stream.ReadAsync (buffer, ct);
+                    int read = await stream.ReadAsync (buffer,0, buffer.Length, ct);
                     Trace.WriteLine ($"> Received {read} bytes from {client.Client.RemoteEndPoint}");
                     Trace.WriteLine ($"> [{BitConverter.ToString (buffer, 0, read)}]");
                     await stream.WriteAsync (buffer, 0, read, ct);
