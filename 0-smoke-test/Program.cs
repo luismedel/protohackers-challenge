@@ -17,7 +17,7 @@ namespace SmokeTest
             [Option ('p', "port", Required = false, Default = 7777, HelpText = "Port")]
             public int Port { get; set; }
 
-            [Option ("trace", Required = false, Default = false, HelpText = "Show trace")]
+            [Option ("trace", Required = false, Default = true, HelpText = "Show trace")]
             public bool Trace { get; set; }
         }
 

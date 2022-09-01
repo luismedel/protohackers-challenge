@@ -28,9 +28,6 @@ namespace SmokeTest
 
                 await EchoData (client, ct);
 
-                //await SendData (client, data, ct);
-                //Trace.WriteLine ($"> Sent {data.Length} bytes to {client.Client.RemoteEndPoint}");
-
                 Trace.WriteLine ($"> Closing connection to {client.Client.RemoteEndPoint}.");
                 client.Close ();
             }
@@ -38,21 +35,21 @@ namespace SmokeTest
 
         static async Task EchoData (TcpClient client, CancellationToken ct)
         {
-            var buffer = new byte[1024];
-            var stream = client.GetStream ();
-
-            while (stream.DataAvailable)
+            try
             {
-                int read = await stream.ReadAsync (buffer, ct);
-                Trace.WriteLine ($"> Received {read} bytes from {client.Client.RemoteEndPoint}");
-                Trace.WriteLine ($"> [{BitConverter.ToString (buffer, 0, read)}]");
-                await stream.WriteAsync (buffer, 0, read);
-            }
-        }
+                var buffer = new byte[1024];
+                var stream = client.GetStream ();
 
-        static async Task SendData (TcpClient client, byte[] data, CancellationToken ct)
-        {
-            await client.GetStream ().WriteAsync (data, ct);
+                while (stream.DataAvailable)
+                {
+                    int read = await stream.ReadAsync (buffer, ct);
+                    Trace.WriteLine ($"> Received {read} bytes from {client.Client.RemoteEndPoint}");
+                    Trace.WriteLine ($"> [{BitConverter.ToString (buffer, 0, read)}]");
+                    await stream.WriteAsync (buffer, 0, read, ct);
+                }
+            }
+            catch { }
+
         }
 
         readonly IPEndPoint _endpoint;
