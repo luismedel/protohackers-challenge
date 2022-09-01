@@ -48,9 +48,10 @@ namespace SmokeTest
                     await stream.WriteAsync (buffer, 0, read, ct);
                 }
             }
-            catch { }
-
-        }
+            catch (Exception ex)
+            {
+                Trace.WriteLine ($"> [ERROR] {ex}");
+            }
 
         readonly IPEndPoint _endpoint;
     }
