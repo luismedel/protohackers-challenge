@@ -28,8 +28,13 @@ namespace SmokeTest
 
                 await EchoData (client, ct);
 
-                Trace.WriteLine ($"> Closing connection to {client.Client.RemoteEndPoint}.");
-                client.Close ();
+                if (client.Connected)
+                {
+                    Trace.WriteLine ($"> Closing connection to {client.Client.RemoteEndPoint}.");
+                    client.Close ();
+                }
+                else
+                    Trace.WriteLine ($"> Client disconnected.");
             }
         }
 
@@ -40,7 +45,7 @@ namespace SmokeTest
                 var buffer = new byte[1024];
                 var stream = client.GetStream ();
 
-                while (stream.DataAvailable)
+                while (client.Connected && stream.DataAvailable)
                 {
                     int read = await stream.ReadAsync (buffer, ct);
                     Trace.WriteLine ($"> Received {read} bytes from {client.Client.RemoteEndPoint}");
