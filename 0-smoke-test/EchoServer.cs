@@ -59,9 +59,12 @@ namespace SmokeTest
             var buffer = new byte[1024];
             var stream = client.GetStream ();
 
-            while (client.Connected && stream.DataAvailable)
+            while (client.Connected)
             {
                 int read = await stream.ReadAsync (buffer,0, buffer.Length, ct);
+                if (read == 0)
+                    break;
+
                 Logger.Debug ($"> Received {read} bytes from {client.Client.RemoteEndPoint}");
                 Logger.Debug ($"> [{BitConverter.ToString (buffer, 0, read)}]");
 
