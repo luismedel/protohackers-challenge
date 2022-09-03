@@ -37,11 +37,14 @@ namespace PrimeTime
             {
                 var ct = cts.Token;
 
-                var t = StartServer (o.IpAddress, o.Port, ct);
+                Logger.Info ($"Binding server to {o.IpAddress}:{o.Port}...");
+                PrimeServer server = new PrimeServer (o.IpAddress, o.Port);
+
+                var t = StartServer (server, ct);
 
                 Console.WriteLine ("Press [q] to quit the server...");
 
-                while (Console.ReadKey ().KeyChar != 'q')
+                while (server.IsRunning && Console.ReadKey ().KeyChar != 'q')
                     ;
 
                 cts.Cancel ();
@@ -49,13 +52,11 @@ namespace PrimeTime
             }
         }
 
-        static Task StartServer (string addr, int port, CancellationToken ct)
+        static Task StartServer (PrimeServer server, CancellationToken ct)
         {
             Task t = new Task (() => {
-                PrimeServer server = new PrimeServer (addr, port);
                 try
                 {
-                    Logger.Info ($"Binding server to {addr}:{port}...");
                     var awaiter = server.Run (ct).GetAwaiter ();
                     awaiter.GetResult ();
                 }

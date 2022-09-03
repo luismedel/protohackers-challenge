@@ -8,6 +8,8 @@ namespace PrimeTime
 {
     public class PrimeServer
     {
+        public bool IsRunning { get; private set; }
+
         public PrimeServer (string addr, int port)
         {
             _endpoint = new IPEndPoint (IPAddress.Parse (addr), port);
@@ -15,10 +17,14 @@ namespace PrimeTime
 
         public async Task Run (CancellationToken ct)
         {
+            if (this.IsRunning)
+                return;
+
             var server = new TcpListener (_endpoint);
             server.Start ();
             Logger.Info ($"Server listening for connections to {_endpoint}...");
 
+            this.IsRunning = true;
             while (!ct.IsCancellationRequested)
             {
                 var client = await server.AcceptTcpClientAsync (ct);
@@ -47,6 +53,8 @@ namespace PrimeTime
                     }
                 }
             }
+
+            this.IsRunning = false;
         }
 
         bool IsPrime (double number)
