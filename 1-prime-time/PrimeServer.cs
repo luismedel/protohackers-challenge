@@ -48,11 +48,14 @@ namespace PrimeTime
                             Logger.Debug ($"Sending MALFORMED response to {client.Client.RemoteEndPoint}...");
                             await SendMalformedResponse (client, ct);
 
-                            Logger.Debug ($"Closing connection to {client.Client.RemoteEndPoint}...");
-                            client.Close ();
-
                             break;
                         }
+                    }
+
+                    if (client.Connected)
+                    {
+                        Logger.Debug ($"Closing connection to {client.Client.RemoteEndPoint}...");
+                        client.Close ();
                     }
                 }
             }
