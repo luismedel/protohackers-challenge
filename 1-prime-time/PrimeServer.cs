@@ -125,7 +125,8 @@ namespace PrimeTime
                 var prime = isPrime ? "true" : "false";
                 var response = $"{{ \"method\": \"isPrime\", \"prime\": {prime} }}";
                 Logger.Debug ($"> {response}");
-                await sw.WriteLineAsync (response);
+                await sw.WriteAsync (response);
+                //await sw.WriteLineAsync (response);
             }
             catch (Exception ex)
             {
