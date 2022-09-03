@@ -17,7 +17,7 @@ namespace SmokeTest
             [Option ('p', "port", Required = false, Default = 7777, HelpText = "Port")]
             public int Port { get; set; }
 
-            [Option ("trace", Required = false, SetN, Default = true, HelpText = "Show trace")]
+            [Option ("trace", Required = false, Default = true, HelpText = "Show trace")]
             public bool ShowTrace { get; set; }
         }
 
@@ -73,7 +73,9 @@ namespace SmokeTest
                     Logger.Info ($"Server closed.");
                 }
             }, ct);
+
             t.Start ();
+
             return t;
         }
     }
