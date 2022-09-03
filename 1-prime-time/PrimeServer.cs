@@ -146,7 +146,7 @@ namespace SmokeTest
         static async IAsyncEnumerable<JsonDocument?> ReadRecords (TcpClient client, [EnumeratorCancellation] CancellationToken ct)
         {
             StreamReader sr = new StreamReader (client.GetStream ());
-            while (!sr.EndOfStream)
+            while (client.Connected)
             {
                 string? line = await sr.ReadLineAsync ();
                 if (line == null)
