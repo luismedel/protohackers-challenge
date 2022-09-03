@@ -66,7 +66,7 @@ namespace PrimeTime
             }
         }
 
-        bool IsPrime (double number)
+        static bool IsPrime (double number)
         {
             // Fractional numbers can't be prime
             if (Math.Floor (number) != number)
@@ -81,8 +81,11 @@ namespace PrimeTime
             if (number % 2 == 0)
                 return false;
 
-            if (_primeMemo.TryGetValue (number, out bool memo))
-                return memo;
+            lock (_primeMemo)
+            {
+                if (_primeMemo.TryGetValue (number, out bool memo))
+                    return memo;
+            }
 
             var limit = (int) Math.Floor (Math.Sqrt (number));
 
@@ -97,24 +100,40 @@ namespace PrimeTime
                 }
             }
 
+            lock (_primeMemo)
+                _primeMemo[number] = result;
+
             return result;
         }
 
         async Task SendResponse (TcpClient client, bool isPrime, CancellationToken ct)
         {
-            StreamWriter sw = new StreamWriter (client.GetStream ());
-            var prime = isPrime ? "true" : "false";
-            var response = $"{{ \"method\": \"isPrime\", \"prime\": {prime} }}";
-            Logger.Debug ($"> {response}");
-            await sw.WriteLineAsync (response);
-            await sw.FlushAsync ();
+            try
+            {
+                StreamWriter sw = new StreamWriter (client.GetStream ());
+                var prime = isPrime ? "true" : "false";
+                var response = $"{{ \"method\": \"isPrime\", \"prime\": {prime} }}";
+                Logger.Debug ($"> {response}");
+                await sw.WriteLineAsync (response);
+            }
+            catch (Exception ex)
+            {
+                Logger.Exception (ex);
+                client.Close ();
+            }
         }
 
         async Task SendMalformedResponse (TcpClient client, CancellationToken ct)
         {
-            StreamWriter sw = new StreamWriter (client.GetStream ());
-            await sw.WriteLineAsync ("malformed request");
-            await sw.FlushAsync ();
+            try
+            {
+                StreamWriter sw = new StreamWriter (client.GetStream ());
+                await sw.WriteLineAsync ("malformed request");
+            }
+            catch (Exception ex)
+            {
+                Logger.Exception (ex);
+            }
         }
 
         bool IsValidJson (JsonDocument? json)
@@ -179,6 +198,6 @@ namespace PrimeTime
         }
 
         readonly IPEndPoint _endpoint;
-        readonly Dictionary<double, bool> _primeMemo = new Dictionary<double, bool> ();
+        static readonly Dictionary<double, bool> _primeMemo = new Dictionary<double, bool> ();
     }
 }
