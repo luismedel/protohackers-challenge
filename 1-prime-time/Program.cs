@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 
-namespace SmokeTest
+namespace PrimeTime
 {
     class Program
     {
@@ -17,8 +17,8 @@ namespace SmokeTest
             [Option ('p', "port", Required = false, Default = 7777, HelpText = "Port")]
             public int Port { get; set; }
 
-            [Option ("trace", Required = false, Default = false, HelpText = "Show trace")]
-            public bool Trace { get; set; }
+            [Option ("trace", Required = false, Default = true, HelpText = "Show trace")]
+            public bool ShowTrace { get; set; }
         }
 
         static void Main (string[] args)
@@ -30,18 +30,18 @@ namespace SmokeTest
 
         static void Run (Options o)
         {
-            if (o.Trace)
-                Trace.Listeners.Add (new ConsoleTraceListener ());
+            if (o.ShowTrace)
+                Logger.AddTraceListener (new ConsoleTraceListener ());
 
             using (var cts = new CancellationTokenSource ())
             {
                 var ct = cts.Token;
 
-                var t = RunServer (o.IpAddress, o.Port, ct);
+                var t = StartServer (o.IpAddress, o.Port, ct);
 
                 Console.WriteLine ("Press [q] to quit the server...");
 
-                while (!ct.IsCancellationRequested && Console.ReadKey ().KeyChar != 'q')
+                while (Console.ReadKey ().KeyChar != 'q')
                     ;
 
                 cts.Cancel ();
@@ -49,31 +49,33 @@ namespace SmokeTest
             }
         }
 
-        static Task RunServer (string addr, int port, CancellationToken ct)
+        static Task StartServer (string addr, int port, CancellationToken ct)
         {
             Task t = new Task (() => {
                 PrimeServer server = new PrimeServer (addr, port);
                 try
                 {
-                    Console.WriteLine ($"Binding server to {addr}:{port}...");
+                    Logger.Info ($"Binding server to {addr}:{port}...");
                     var awaiter = server.Run (ct).GetAwaiter ();
                     awaiter.GetResult ();
                 }
                 catch (OperationCanceledException)
                 {
-                    Console.WriteLine ($"Cancel requested.");
+                    Logger.Info ($"Cancel requested.");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine ($"Error encountered: {ex.Message}");
+                    Logger.Exception (ex);
                     throw;
                 }
                 finally
                 {
-                    Console.WriteLine ($"Server closed.");
+                    Logger.Info ($"Server closed.");
                 }
             }, ct);
+
             t.Start ();
+
             return t;
         }
     }

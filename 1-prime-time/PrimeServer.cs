@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Text.Json;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 
-namespace SmokeTest
+namespace PrimeTime
 {
     public class PrimeServer
     {
@@ -18,7 +17,7 @@ namespace SmokeTest
         {
             var server = new TcpListener (_endpoint);
             server.Start ();
-            Trace.WriteLine ($"Server listening for connections to {_endpoint}...");
+            Logger.Info ($"Server listening for connections to {_endpoint}...");
 
             while (!ct.IsCancellationRequested)
             {
@@ -26,22 +25,22 @@ namespace SmokeTest
                 if (client == null)
                     continue;
 
-                Trace.WriteLine ($"Accepted connection from {client.Client.RemoteEndPoint}");
+                Logger.Debug ($"Accepted connection from {client.Client.RemoteEndPoint}");
 
                 await foreach (var record in ReadRecords(client, ct))
                 {
                     if (IsValidJson (record))
                     {
-                        Trace.WriteLine ($"Sending response to {client.Client.RemoteEndPoint}...");
+                        Logger.Debug ($"Sending response to {client.Client.RemoteEndPoint}...");
                         var n = record!.RootElement.GetProperty ("number").GetDouble ();
                         await SendResponse (client, IsPrime(n), ct);
                     }
                     else
                     {
-                        Trace.WriteLine ($"Sending MALFORMED response to {client.Client.RemoteEndPoint}...");
+                        Logger.Debug ($"Sending MALFORMED response to {client.Client.RemoteEndPoint}...");
                         await SendMalformedResponse (client, ct);
 
-                        Trace.WriteLine ($"Closing connection to {client.Client.RemoteEndPoint}...");
+                        Logger.Debug ($"Closing connection to {client.Client.RemoteEndPoint}...");
                         client.Close ();
 
                         break;
@@ -89,7 +88,7 @@ namespace SmokeTest
             StreamWriter sw = new StreamWriter (client.GetStream ());
             var prime = isPrime ? "true" : "false";
             var response = $"{{ \"method\": \"isPrime\", \"prime\": \"{prime}\" }}";
-            Trace.WriteLine ($"> {response}");
+            Logger.Debug ($"> {response}");
             await sw.WriteLineAsync (response);
             await sw.FlushAsync ();
         }
@@ -107,31 +106,31 @@ namespace SmokeTest
             {
                 if (json == null)
                 {
-                    Trace.WriteLine ("> Non json.");
+                    Logger.Debug ("> Non json.");
                     return false;
                 }
 
                 if (!json.RootElement.TryGetProperty ("method", out var method))
                 {
-                    Trace.WriteLine ("> Missing 'method' member.");
+                    Logger.Debug ("> Missing 'method' member.");
                     return false;
                 }
 
                 if (!method.ValueEquals ("isPrime"))
                 {
-                    Trace.WriteLine ("> method != 'isPrime'.");
+                    Logger.Debug ("> method != 'isPrime'.");
                     return false;
                 }
 
                 if (!json.RootElement.TryGetProperty ("number", out var number))
                 {
-                    Trace.WriteLine ("> Missing 'number' member.");
+                    Logger.Debug ("> Missing 'number' member.");
                     return false;
                 }
 
                 if (!number.TryGetDouble (out var _))
                 {
-                    Trace.WriteLine ("> Not a valid number.");
+                    Logger.Debug ("> Not a valid number.");
                     return false;
                 }
 
@@ -152,7 +151,7 @@ namespace SmokeTest
                 if (line == null)
                     yield break;
 
-                Trace.WriteLine ($"> {line}");
+                Logger.Debug ($"> {line}");
 
                 JsonDocument? result = null;
                 try { result = JsonDocument.Parse (line); }
