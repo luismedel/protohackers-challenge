@@ -104,7 +104,7 @@ namespace PrimeTime
         {
             StreamWriter sw = new StreamWriter (client.GetStream ());
             var prime = isPrime ? "true" : "false";
-            var response = $"{{ \"method\": \"isPrime\", \"prime\": \"{prime}\" }}";
+            var response = $"{{ \"method\": \"isPrime\", \"prime\": {prime} }}";
             Logger.Debug ($"> {response}");
             await sw.WriteLineAsync (response);
             await sw.FlushAsync ();
