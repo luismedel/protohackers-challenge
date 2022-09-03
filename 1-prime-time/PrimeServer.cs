@@ -41,7 +41,8 @@ namespace PrimeTime
                         {
                             Logger.Debug ($"Sending response to {client.Client.RemoteEndPoint}...");
                             var n = record!.RootElement.GetProperty ("number").GetDouble ();
-                            await SendResponse (client, IsPrime (n), ct);
+                            var result = await IsPrime (n);
+                            await SendResponse (client, result, ct);
                         }
                         else
                         {
@@ -69,7 +70,7 @@ namespace PrimeTime
             }
         }
 
-        static bool IsPrime (double number)
+        static bool CalcIsPrime(double number)
         {
             // Fractional numbers can't be prime
             if (Math.Floor (number) != number)
@@ -107,6 +108,13 @@ namespace PrimeTime
                 _primeMemo[number] = result;
 
             return result;
+        }
+
+        static Task<bool> IsPrime (double number)
+        {
+            Task<bool> t = new Task<bool> (() => CalcIsPrime (number));
+            t.Start ();
+            return t;
         }
 
         async Task SendResponse (TcpClient client, bool isPrime, CancellationToken ct)
