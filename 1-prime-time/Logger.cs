@@ -24,6 +24,12 @@ namespace PrimeTime
         [Conditional ("DEBUG")]
         public static void Debug (string format, params object[] args) => System.Diagnostics.Debug.WriteLine (Format ("DEBUG", format, args));
 
-        static string Format (string level, string format, params object[] args) => string.Format ($"[{DateTime.Now.ToString ("s")}] [{level:5}] {format}", args);
+        static string Format (string level, string format, params object[] args)
+        {
+            if (args.Length == 0)
+                return $"[{DateTime.Now.ToString ("s")}] [{level:5}] {format}";
+            else
+                return string.Format ($"[{DateTime.Now.ToString ("s")}] [{level:5}] {format}", args);
+        }
     }
 }

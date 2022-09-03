@@ -20,41 +20,50 @@ namespace PrimeTime
             if (this.IsRunning)
                 return;
 
-            var server = new TcpListener (_endpoint);
-            server.Start ();
-            Logger.Info ($"Server listening for connections to {_endpoint}...");
-
-            this.IsRunning = true;
-            while (!ct.IsCancellationRequested)
+            try
             {
-                var client = await server.AcceptTcpClientAsync (ct);
-                if (client == null)
-                    continue;
+                var server = new TcpListener (_endpoint);
+                server.Start ();
+                Logger.Info ($"Server listening for connections to {_endpoint}...");
 
-                Logger.Debug ($"Accepted connection from {client.Client.RemoteEndPoint}");
-
-                await foreach (var record in ReadRecords(client, ct))
+                this.IsRunning = true;
+                while (!ct.IsCancellationRequested)
                 {
-                    if (IsValidJson (record))
-                    {
-                        Logger.Debug ($"Sending response to {client.Client.RemoteEndPoint}...");
-                        var n = record!.RootElement.GetProperty ("number").GetDouble ();
-                        await SendResponse (client, IsPrime(n), ct);
-                    }
-                    else
-                    {
-                        Logger.Debug ($"Sending MALFORMED response to {client.Client.RemoteEndPoint}...");
-                        await SendMalformedResponse (client, ct);
+                    var client = await server.AcceptTcpClientAsync (ct);
+                    if (client == null)
+                        continue;
 
-                        Logger.Debug ($"Closing connection to {client.Client.RemoteEndPoint}...");
-                        client.Close ();
+                    Logger.Debug ($"Accepted connection from {client.Client.RemoteEndPoint}");
 
-                        break;
+                    await foreach (var record in ReadRecords (client, ct))
+                    {
+                        if (IsValidJson (record))
+                        {
+                            Logger.Debug ($"Sending response to {client.Client.RemoteEndPoint}...");
+                            var n = record!.RootElement.GetProperty ("number").GetDouble ();
+                            await SendResponse (client, IsPrime (n), ct);
+                        }
+                        else
+                        {
+                            Logger.Debug ($"Sending MALFORMED response to {client.Client.RemoteEndPoint}...");
+                            await SendMalformedResponse (client, ct);
+
+                            Logger.Debug ($"Closing connection to {client.Client.RemoteEndPoint}...");
+                            client.Close ();
+
+                            break;
+                        }
                     }
                 }
             }
-
-            this.IsRunning = false;
+            catch (Exception ex)
+            {
+                Logger.Exception (ex);
+            }
+            finally
+            {
+                this.IsRunning = false;
+            }
         }
 
         bool IsPrime (double number)
@@ -163,7 +172,7 @@ namespace PrimeTime
 
                 JsonDocument? result = null;
                 try { result = JsonDocument.Parse (line); }
-                catch { }
+                catch (Exception ex) { Logger.Debug (ex.Message); }
 
                 yield return result;
             }
