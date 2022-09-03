@@ -126,6 +126,7 @@ namespace PrimeTime
                 var response = $"{{ \"method\": \"isPrime\", \"prime\": {prime} }}";
                 Logger.Debug ($"> {response}");
                 await sw.WriteAsync (response);
+                await sw.FlushAsync();
                 //await sw.WriteLineAsync (response);
             }
             catch (Exception ex)
@@ -141,6 +142,7 @@ namespace PrimeTime
             {
                 StreamWriter sw = new StreamWriter (client.GetStream ());
                 await sw.WriteLineAsync ("malformed request");
+                await sw.FlushAsync ();
             }
             catch (Exception ex)
             {
