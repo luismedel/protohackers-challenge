@@ -16,7 +16,7 @@ namespace SmokeTest
         {
             var server = new TcpListener (_endpoint);
             server.Start ();
-            Trace.WriteLine ($"Server listening for connections to {_endpoint}...");
+            Logger.Debug ($"Server listening for connections to {_endpoint}...");
 
             while (!ct.IsCancellationRequested)
             {
@@ -24,38 +24,48 @@ namespace SmokeTest
                 if (client == null)
                     continue;
 
-                Trace.WriteLine ($"Accepted connection from {client.Client.RemoteEndPoint}");
+                Logger.Debug ($"Accepted connection from {client.Client.RemoteEndPoint}");
+                Logger.Indent ();
 
-                await EchoData (client, ct);
-
-                if (client.Connected)
+                try
                 {
-                    Trace.WriteLine ($"> Closing connection to {client.Client.RemoteEndPoint}.");
-                    client.Close ();
+                    await EchoData (client, ct);
                 }
-                else
-                    Trace.WriteLine ($"> Client disconnected.");
+                catch (Exception ex)
+                {
+                    Logger.Exception (ex);
+                }
+                finally
+                {
+                    if (client.Connected)
+                    {
+                        Logger.Debug ($"> Closing connection to {client.Client.RemoteEndPoint}.");
+
+                        try { client.Close (); }
+                        catch (Exception ex) { Logger.Exception (ex); }
+                    }
+                    else
+                        Logger.Debug ($"> Client disconnected.");
+                    
+                    client.Dispose ();
+
+                    Logger.Unindent ();
+                }
             }
         }
 
         static async Task EchoData (TcpClient client, CancellationToken ct)
         {
-            try
-            {
-                var buffer = new byte[1024];
-                var stream = client.GetStream ();
+            var buffer = new byte[1024];
+            var stream = client.GetStream ();
 
-                while (client.Connected && stream.DataAvailable)
-                {
-                    int read = await stream.ReadAsync (buffer,0, buffer.Length, ct);
-                    Trace.WriteLine ($"> Received {read} bytes from {client.Client.RemoteEndPoint}");
-                    Trace.WriteLine ($"> [{BitConverter.ToString (buffer, 0, read)}]");
-                    await stream.WriteAsync (buffer, 0, read, ct);
-                }
-            }
-            catch (Exception ex)
+            while (client.Connected && stream.DataAvailable)
             {
-                Trace.WriteLine ($"> [ERROR] {ex}");
+                int read = await stream.ReadAsync (buffer,0, buffer.Length, ct);
+                Logger.Debug ($"> Received {read} bytes from {client.Client.RemoteEndPoint}");
+                Logger.Debug ($"> [{BitConverter.ToString (buffer, 0, read)}]");
+
+                await stream.WriteAsync (buffer, 0, read, ct);
             }
         }
         

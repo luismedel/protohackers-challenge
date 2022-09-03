@@ -11,14 +11,14 @@ namespace SmokeTest
     {
         public class Options
         {
-            [Option ('a', "addr", Required = false, Default = "127.0.0.1", HelpText = "Address")]
+            [Option ('a', "addr", Required = false, Default = "0.0.0.0", HelpText = "Address")]
             public string IpAddress { get; set; } = String.Empty;
 
             [Option ('p', "port", Required = false, Default = 7777, HelpText = "Port")]
             public int Port { get; set; }
 
-            [Option ("trace", Required = false, Default = true, HelpText = "Show trace")]
-            public bool Trace { get; set; }
+            [Option ("trace", Required = false, SetN, Default = true, HelpText = "Show trace")]
+            public bool ShowTrace { get; set; }
         }
 
         static void Main (string[] args)
@@ -30,8 +30,8 @@ namespace SmokeTest
 
         static void Run (Options o)
         {
-            if (o.Trace)
-                Trace.Listeners.Add (new ConsoleTraceListener ());
+            if (o.ShowTrace)
+                Logger.AddTraceListener (new ConsoleTraceListener ());
 
             using (var cts = new CancellationTokenSource ())
             {
@@ -55,22 +55,22 @@ namespace SmokeTest
                 EchoServer server = new EchoServer (addr, port);
                 try
                 {
-                    Trace.WriteLine ($"Binding server to {addr}:{port}...");
+                    Logger.Info ($"Binding server to {addr}:{port}...");
                     var awaiter = server.Run (ct).GetAwaiter ();
                     awaiter.GetResult ();
                 }
-                catch (OperationCanceledException ex)
+                catch (OperationCanceledException)
                 {
-                    Trace.WriteLine ($"Cancel requested.");
+                    Logger.Info ($"Cancel requested.");
                 }
                 catch (Exception ex)
                 {
-                    Trace.WriteLine ($"Error encountered: {ex.Message}");
+                    Logger.Exception (ex);
                     throw;
                 }
                 finally
                 {
-                    Trace.WriteLine ($"Server closed.");
+                    Logger.Info ($"Server closed.");
                 }
             }, ct);
             t.Start ();
