@@ -42,6 +42,9 @@ namespace PrimeTime
 
                 var t = StartServer (server, ct);
 
+                while (!server.IsRunning)
+                    Task.Delay (100);
+
                 Console.WriteLine ("Press [q] to quit the server...");
 
                 while (server.IsRunning && Console.ReadKey ().KeyChar != 'q')

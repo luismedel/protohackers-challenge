@@ -8,7 +8,7 @@ namespace PrimeTime
 {
     public class PrimeServer
     {
-        public bool IsRunning { get; private set; }
+        public bool IsRunning { get; private set; } = false;
 
         public PrimeServer (string addr, int port)
         {
