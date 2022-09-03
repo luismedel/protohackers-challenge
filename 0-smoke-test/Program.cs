@@ -37,11 +37,11 @@ namespace SmokeTest
             {
                 var ct = cts.Token;
 
-                var t = RunServer (o.IpAddress, o.Port, ct);
+                var t = StartServer (o.IpAddress, o.Port, ct);
 
                 Console.WriteLine ("Press [q] to quit the server...");
 
-                while (!ct.IsCancellationRequested && Console.ReadKey ().KeyChar != 'q')
+                while (Console.ReadKey ().KeyChar != 'q')
                     ;
 
                 cts.Cancel ();
@@ -49,7 +49,7 @@ namespace SmokeTest
             }
         }
 
-        static Task RunServer (string addr, int port, CancellationToken ct)
+        static Task StartServer (string addr, int port, CancellationToken ct)
         {
             Task t = new Task (() => {
                 EchoServer server = new EchoServer (addr, port);
