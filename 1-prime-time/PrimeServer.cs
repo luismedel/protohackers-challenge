@@ -187,7 +187,7 @@ namespace PrimeTime
             while (client.Connected)
             {
                 string? line = await sr.ReadLineAsync ();
-                if (line == null)
+                if (string.IsNullOrEmpty(line))
                     yield break;
 
                 Logger.Debug ($"> {line}");
