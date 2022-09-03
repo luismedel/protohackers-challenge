@@ -11,7 +11,7 @@ namespace SmokeTest
     {
         public class Options
         {
-            [Option ('a', "addr", Required = false, Default = "127.0.0.1", HelpText = "Address")]
+            [Option ('a', "addr", Required = false, Default = "0.0.0.0", HelpText = "Address")]
             public string IpAddress { get; set; } = String.Empty;
 
             [Option ('p', "port", Required = false, Default = 7777, HelpText = "Port")]
