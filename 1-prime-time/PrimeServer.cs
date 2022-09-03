@@ -15,6 +15,33 @@ namespace PrimeTime
             _endpoint = new IPEndPoint (IPAddress.Parse (addr), port);
         }
 
+        void HandleClient (TcpClient client, CancellationToken ct)
+        {
+            foreach (var record in ReadRecords (client))
+            {
+                if (IsValidJson (record))
+                {
+                    Logger.Debug ($"Sending response to {client.Client.RemoteEndPoint}...");
+                    var n = record!.RootElement.GetProperty ("number").GetDouble ();
+                    var result = IsPrime (n);
+                    SendResponse (client, result, ct);
+                }
+                else
+                {
+                    Logger.Debug ($"Sending MALFORMED response to {client.Client.RemoteEndPoint}...");
+                    SendMalformedResponse (client, ct);
+
+                    break;
+                }
+            }
+
+            if (client.Connected)
+            {
+                Logger.Debug ($"Closing connection to {client.Client.RemoteEndPoint}...");
+                client.Close ();
+            }
+        }
+
         public async Task Run (CancellationToken ct)
         {
             if (this.IsRunning)
@@ -35,29 +62,7 @@ namespace PrimeTime
 
                     Logger.Debug ($"Accepted connection from {client.Client.RemoteEndPoint}");
 
-                    await foreach (var record in ReadRecords (client, ct))
-                    {
-                        if (IsValidJson (record))
-                        {
-                            Logger.Debug ($"Sending response to {client.Client.RemoteEndPoint}...");
-                            var n = record!.RootElement.GetProperty ("number").GetDouble ();
-                            var result = await IsPrime (n);
-                            await SendResponse (client, result, ct);
-                        }
-                        else
-                        {
-                            Logger.Debug ($"Sending MALFORMED response to {client.Client.RemoteEndPoint}...");
-                            await SendMalformedResponse (client, ct);
-
-                            break;
-                        }
-                    }
-
-                    if (client.Connected)
-                    {
-                        Logger.Debug ($"Closing connection to {client.Client.RemoteEndPoint}...");
-                        client.Close ();
-                    }
+                    new Task (() => HandleClient (client, ct)).Start ();
                 }
             }
             catch (Exception ex)
@@ -70,7 +75,7 @@ namespace PrimeTime
             }
         }
 
-        static bool CalcIsPrime(double number)
+        static bool IsPrime(double number)
         {
             // Fractional numbers can't be prime
             if (Math.Floor (number) != number)
@@ -110,14 +115,7 @@ namespace PrimeTime
             return result;
         }
 
-        static Task<bool> IsPrime (double number)
-        {
-            Task<bool> t = new Task<bool> (() => CalcIsPrime (number));
-            t.Start ();
-            return t;
-        }
-
-        async Task SendResponse (TcpClient client, bool isPrime, CancellationToken ct)
+        void SendResponse (TcpClient client, bool isPrime, CancellationToken ct)
         {
             try
             {
@@ -125,9 +123,8 @@ namespace PrimeTime
                 var prime = isPrime ? "true" : "false";
                 var response = $"{{ \"method\": \"isPrime\", \"prime\": {prime} }}";
                 Logger.Debug ($"> {response}");
-                await sw.WriteAsync (response);
-                await sw.FlushAsync();
-                //await sw.WriteLineAsync (response);
+                sw.WriteLine (response);
+                sw.Flush();
             }
             catch (Exception ex)
             {
@@ -136,17 +133,18 @@ namespace PrimeTime
             }
         }
 
-        async Task SendMalformedResponse (TcpClient client, CancellationToken ct)
+        void SendMalformedResponse (TcpClient client, CancellationToken ct)
         {
             try
             {
                 StreamWriter sw = new StreamWriter (client.GetStream ());
-                await sw.WriteLineAsync ("malformed request");
-                await sw.FlushAsync ();
+                sw.WriteLine ("malformed request");
+                sw.Flush ();
             }
             catch (Exception ex)
             {
                 Logger.Exception (ex);
+                client.Close ();
             }
         }
 
@@ -192,12 +190,12 @@ namespace PrimeTime
             }
         }
 
-        static async IAsyncEnumerable<JsonDocument?> ReadRecords (TcpClient client, [EnumeratorCancellation] CancellationToken ct)
+        static IEnumerable<JsonDocument?> ReadRecords (TcpClient client)
         {
             StreamReader sr = new StreamReader (client.GetStream ());
             while (client.Connected)
             {
-                string? line = await sr.ReadLineAsync ();
+                string? line = sr.ReadLine ();
                 if (string.IsNullOrEmpty(line))
                     yield break;
 
