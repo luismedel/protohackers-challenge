@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Text.Json;
 using System.Net;
 using System.Net.Sockets;
@@ -8,11 +9,34 @@ namespace PrimeTime
 {
     public class PrimeServer
     {
+        const int MAX_TASKS = 1024;
+
         public bool IsRunning { get; private set; } = false;
 
         public PrimeServer (string addr, int port)
         {
             _endpoint = new IPEndPoint (IPAddress.Parse (addr), port);
+        }
+
+        void AddTask(Action action)
+        {
+            Task t = new Task (action);
+            while (true)
+            {
+                lock (_runningTasks)
+                {
+                    if (_runningTasks.Count == MAX_TASKS)
+                    {
+                        _runningTasks.RemoveAll (t => t.IsCompleted);
+                        if (_runningTasks.Count == MAX_TASKS)
+                            continue;
+                    }
+
+                    _runningTasks.Add (t);
+                    t.Start ();
+                    break;
+                }
+            }
         }
 
         void HandleClient (TcpClient client, CancellationToken ct)
@@ -62,7 +86,7 @@ namespace PrimeTime
 
                     Logger.Debug ($"Accepted connection from {client.Client.RemoteEndPoint}");
 
-                    new Task (() => HandleClient (client, ct)).Start ();
+                    AddTask (() => HandleClient (client, ct));
                 }
             }
             catch (Exception ex)
@@ -72,6 +96,10 @@ namespace PrimeTime
             finally
             {
                 this.IsRunning = false;
+
+                Task t = Task.WhenAll (_runningTasks);
+                try { t.Wait (); }
+                catch { }
             }
         }
 
@@ -210,6 +238,9 @@ namespace PrimeTime
         }
 
         readonly IPEndPoint _endpoint;
+
+        readonly List<Task> _runningTasks = new List<Task> (MAX_TASKS);
+
         static readonly Dictionary<double, bool> _primeMemo = new Dictionary<double, bool> ();
     }
 }
