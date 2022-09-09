@@ -54,12 +54,15 @@ namespace Protohackers
 
         void Insert (int timestamp, int price)
         {
+            Logger.Info ($"Inserting {price} into {timestamp}");
             lock (_prices)
                 _prices[timestamp] = price;
         }
 
         int Query (int tstart, int tend)
         {
+            Logger.Info ($"Querying {tstart} <= T <= {tend}...");
+
             if (tstart > tend)
                 return 0;
 
@@ -86,6 +89,8 @@ namespace Protohackers
 
         void HandleClient (TcpClient client, CancellationToken ct)
         {
+            Logger.Indent ();
+            
             foreach (var packet in ReadPackets(client, ct))
             {
                 var arg1 = BitConverter.ToInt32 (packet, 1);
@@ -101,7 +106,9 @@ namespace Protohackers
                         break;
                 }
             }
-            
+
+            Logger.Unindent ();
+
             if (client.Connected)
             {
                 Logger.Debug ($"Closing connection to {client.Client.RemoteEndPoint}...");
