@@ -55,8 +55,7 @@ namespace Protohackers
         void Insert (int timestamp, int price)
         {
             Logger.Info ($"Inserting {price} into {timestamp}");
-            lock (_prices)
-                _prices[timestamp] = price;
+            _prices[timestamp] = price;
         }
 
         int Query (int tstart, int tend)
@@ -69,19 +68,16 @@ namespace Protohackers
             int sum = 0;
             int count = 0;
 
-            lock (_prices)
+            foreach (var kv in _prices)
             {
-                foreach (var kv in _prices)
-                {
-                    if (kv.Key < tstart)
-                        continue;
+                if (kv.Key < tstart)
+                    continue;
 
-                    if (kv.Key > tend)
-                        break;
+                if (kv.Key > tend)
+                    break;
 
-                    sum += kv.Key;
-                    count++;
-                }
+                sum += kv.Key;
+                count++;
             }
 
             return count != 0 ? (sum / count) : 0;
