@@ -96,7 +96,7 @@ namespace Protohackers
                 foreach (var packet in ReadPackets (client, ct))
                 {
                     char cmd = (char) packet[0];
-                    if (cmd != 'I' || cmd != 'Q')
+                    if (cmd != 'I' && cmd != 'Q')
                     {
                         Logger.Debug ($"Invalid request from {client.Client.RemoteEndPoint}");
                         client.Close ();
