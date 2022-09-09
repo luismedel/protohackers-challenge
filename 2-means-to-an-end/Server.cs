@@ -95,18 +95,23 @@ namespace Protohackers
             {
                 foreach (var packet in ReadPackets (client, ct))
                 {
+                    char cmd = (char) packet[0];
+                    if (cmd != 'I' || cmd != 'Q')
+                    {
+                        Logger.Debug ($"Invalid request from {client.Client.RemoteEndPoint}");
+                        client.Close ();
+                        break;
+                    }
+
                     var arg1 = BitConverter.ToInt32 (packet, 1);
                     var arg2 = BitConverter.ToInt32 (packet, 5);
 
-                    switch (packet[0])
-                    {
-                        case (byte) 'I': Insert (arg1, arg2); break;
-                        case (byte) 'Q': WriteResponse (Query (arg1, arg2), client); break;
+                    Logger.Debug ($"Command: {cmd} {arg1} {arg2}");
 
-                        default:
-                            Logger.Debug ($"Invalid request from {client.Client.RemoteEndPoint}");
-                            client.Close ();
-                            break;
+                    switch (cmd)
+                    {
+                        case 'I': Insert (arg1, arg2); break;
+                        case 'Q': WriteResponse (Query (arg1, arg2), client); break;
                     }
                 }
             }
