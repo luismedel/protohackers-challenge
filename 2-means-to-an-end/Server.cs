@@ -101,8 +101,8 @@ namespace Protohackers
                         break;
                     }
 
-                    var arg1 = BitConverter.ToInt32 (packet, 1);
-                    var arg2 = BitConverter.ToInt32 (packet, 5);
+                    int arg1 = packet[1] << 24 | packet[2] << 16 | packet[3] << 8 | packet[4];
+                    int arg2 = packet[5] << 24 | packet[6] << 16 | packet[7] << 8 | packet[8];
 
                     Logger.Debug ($"Command: {cmd} {arg1} {arg2}");
 
@@ -124,8 +124,14 @@ namespace Protohackers
 
         void WriteResponse(int response, TcpClient client)
         {
-            var bytes = BitConverter.GetBytes (response);
-            client.GetStream ().Write (bytes, 0, bytes.Length);
+            byte[] bytes = {
+                (byte)(response & 0xf000 >> 24),
+                (byte)(response & 0x0f00 >> 16),
+                (byte)(response & 0x00f0 >> 8),
+                (byte)(response & 0x000f),
+            };
+
+            client.GetStream ().Write (bytes, 0, 4);
         }
 
         IEnumerable<byte[]> ReadPackets(TcpClient client, CancellationToken ct)
