@@ -42,9 +42,11 @@ namespace Protohackers
 
                             return false;
                         }
+
+                        Logger.Debug ($"Adding task {_runningTasks.Count}");
+                        _runningTasks.Add (t);
                     }
 
-                    _runningTasks.Add (t);
                     t.Start ();
 
                     return true;
@@ -52,13 +54,7 @@ namespace Protohackers
             }
         }
 
-        static void Insert (SortedDictionary<int, int> prices, int timestamp, int price)
-        {
-            Logger.Info ($"Inserting {price} into {timestamp}");
-            prices[timestamp] = price;
-        }
-
-        int Query (SortedDictionary<int, int> prices, int tstart, int tend)
+        int Query (SortedList<int, int> prices, int tstart, int tend)
         {
             Logger.Info ($"Querying {tstart} <= T <= {tend}...");
 
@@ -68,17 +64,20 @@ namespace Protohackers
             int sum = 0;
             int count = 0;
 
-            foreach (var kv in prices)
+            foreach (var item in prices)
             {
-                if (kv.Key < tstart)
+                if (item.Key < tstart)
                     continue;
 
-                if (kv.Key > tend)
+                if (item.Key > tend)
                     break;
 
-                sum += kv.Key;
+                sum += item.Value;
                 count++;
             }
+
+            if (prices.Count > 10000)
+                Logger.Info ($"{sum}/{count} = {sum / count}");
 
             return count != 0 ? (sum / count) : 0;
         }
@@ -87,29 +86,29 @@ namespace Protohackers
         {
             Logger.Indent ();
 
-            SortedDictionary<int, int> prices = new SortedDictionary<int, int> ();
+            var prices = new SortedList<int, int> (1024);
 
-            while (client.Connected && !ct.IsCancellationRequested)
+            while (!ct.IsCancellationRequested)
             {
                 foreach (var packet in ReadPackets (client, ct))
                 {
-                    char cmd = (char) packet[0];
-                    if (cmd != 'I' && cmd != 'Q')
+                    Logger.Debug ($"{client.Client.RemoteEndPoint} {packet.command} {packet.arg1} {packet.arg2}");
+
+                    switch (packet.command)
                     {
-                        Logger.Debug ($"Invalid request from {client.Client.RemoteEndPoint}");
-                        client.Close ();
-                        break;
-                    }
+                        case 'I':
+                            prices.TryAdd (packet.arg1, packet.arg2);
+                            break;
 
-                    int arg1 = packet[1] << 24 | packet[2] << 16 | packet[3] << 8 | packet[4];
-                    int arg2 = packet[5] << 24 | packet[6] << 16 | packet[7] << 8 | packet[8];
+                        case 'Q':
+                            int result = Query (prices, packet.arg1, packet.arg2);
+                            WriteResponse (result, client);
+                            break;
 
-                    Logger.Debug ($"Command: {cmd} {arg1} {arg2}");
-
-                    switch (cmd)
-                    {
-                        case 'I': Insert (prices, arg1, arg2); break;
-                        case 'Q': WriteResponse (Query (prices, arg1, arg2), client); break;
+                        default:
+                            Logger.Debug ($"Invalid request from {client.Client.RemoteEndPoint}");
+                            client.Close ();
+                            continue;
                     }
                 }
             }
@@ -125,46 +124,52 @@ namespace Protohackers
         void WriteResponse(int response, TcpClient client)
         {
             byte[] bytes = {
-                (byte)(response & 0xf000 >> 24),
-                (byte)(response & 0x0f00 >> 16),
-                (byte)(response & 0x00f0 >> 8),
-                (byte)(response & 0x000f),
+                (byte)((response & 0xff000000) >> 24),
+                (byte)((response & 0x00ff0000) >> 16),
+                (byte)((response & 0x0000ff00) >> 8),
+                (byte)(response & 0x000000ff),
             };
 
             client.GetStream ().Write (bytes, 0, 4);
         }
 
-        IEnumerable<byte[]> ReadPackets(TcpClient client, CancellationToken ct)
+        IEnumerable<(int command, int arg1, int arg2)> ReadPackets(TcpClient client, CancellationToken ct)
         {
-            byte[] buffer = new byte[PACKET_SIZE];
-            int offset = 0;
+            byte[] buffer = new byte[PACKET_SIZE * 512];
+            int prevRead = 0;
 
             while (client.Connected && !ct.IsCancellationRequested)
             {
-                var read = client.GetStream ().Read (buffer, offset, PACKET_SIZE - offset);
+                var read = client.GetStream ().Read (buffer, prevRead, buffer.Length - prevRead);
                 if (read == 0)
                     break;
 
-                if (read < PACKET_SIZE)
+                int offset = 0;
+                read += prevRead;
+                while (read >= PACKET_SIZE)
                 {
-                    Logger.Debug ($"Partial packet read: {read} bytes");
-                    offset += read;
-                    continue;
+                    int cmd = buffer[offset++];
+
+                    int arg1 = buffer[offset++] << 24
+                             | buffer[offset++] << 16
+                             | buffer[offset++] << 8
+                             | buffer[offset++];
+
+                    int arg2 = buffer[offset++] << 24
+                             | buffer[offset++] << 16
+                             | buffer[offset++] << 8
+                             | buffer[offset++];
+
+                    yield return new (cmd, arg1, arg2);
+
+                    read -= PACKET_SIZE;
                 }
 
-                Logger.Debug ("Full packet read");
-
-                yield return buffer;
-                offset = 0;
-            }
-
-            Logger.Debug ($"No more data");
-            if (offset > 0)
-            {
-                if (PACKET_SIZE - offset == 0)
-                    yield return buffer;
-                else
-                    Logger.Debug ($"Discarding {PACKET_SIZE - offset} bytes");
+                if (read != 0)
+                {
+                    prevRead = read;
+                    Buffer.BlockCopy (buffer, offset, buffer, 0, read);
+                }
             }
         }
 
@@ -182,6 +187,8 @@ namespace Protohackers
 
             while (this.IsRunning && !ct.IsCancellationRequested)
             {
+                Logger.Info ($"Waiting for connections...");
+
                 try
                 {
                     var client = await listener.AcceptTcpClientAsync (ct);
