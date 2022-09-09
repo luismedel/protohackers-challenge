@@ -133,7 +133,9 @@ namespace Protohackers
                 if (read == 0)
                 {
                     Logger.Debug ($"No more data");
-                    if (offset != 0)
+                    if (PACKET_SIZE - offset == 0)
+                        yield return buffer;
+                    else
                         Logger.Debug ($"Discarding {PACKET_SIZE - offset} bytes");
                     yield break;
                 }
