@@ -90,20 +90,24 @@ namespace Protohackers
         void HandleClient (TcpClient client, CancellationToken ct)
         {
             Logger.Indent ();
-            
-            foreach (var packet in ReadPackets(client, ct))
+
+            while (client.Connected && !ct.IsCancellationRequested)
             {
-                var arg1 = BitConverter.ToInt32 (packet, 1);
-                var arg2 = BitConverter.ToInt32 (packet, 5);
-
-                switch (packet[0])
+                foreach (var packet in ReadPackets (client, ct))
                 {
-                    case (byte)'I': Insert (arg1, arg2); break;
-                    case (byte) 'Q': WriteResponse (Query (arg1, arg2), client); break;
+                    var arg1 = BitConverter.ToInt32 (packet, 1);
+                    var arg2 = BitConverter.ToInt32 (packet, 5);
 
-                    default:
-                        Logger.Debug ($"Invalid request from {client.Client.RemoteEndPoint}");
-                        break;
+                    switch (packet[0])
+                    {
+                        case (byte) 'I': Insert (arg1, arg2); break;
+                        case (byte) 'Q': WriteResponse (Query (arg1, arg2), client); break;
+
+                        default:
+                            Logger.Debug ($"Invalid request from {client.Client.RemoteEndPoint}");
+                            client.Close ();
+                            break;
+                    }
                 }
             }
 
