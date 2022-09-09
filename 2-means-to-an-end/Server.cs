@@ -143,17 +143,7 @@ namespace Protohackers
             {
                 var read = client.GetStream ().Read (buffer, offset, PACKET_SIZE - offset);
                 if (read == 0)
-                {
-                    Logger.Debug ($"No more data");
-                    if (offset > 0)
-                    {
-                        if (PACKET_SIZE - offset == 0)
-                            yield return buffer;
-                        else
-                            Logger.Debug ($"Discarding {PACKET_SIZE - offset} bytes");
-                    }
-                    yield break;
-                }
+                    break;
 
                 if (read < PACKET_SIZE)
                 {
@@ -166,6 +156,15 @@ namespace Protohackers
 
                 yield return buffer;
                 offset = 0;
+            }
+
+            Logger.Debug ($"No more data");
+            if (offset > 0)
+            {
+                if (PACKET_SIZE - offset == 0)
+                    yield return buffer;
+                else
+                    Logger.Debug ($"Discarding {PACKET_SIZE - offset} bytes");
             }
         }
 
