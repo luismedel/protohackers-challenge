@@ -52,13 +52,13 @@ namespace Protohackers
             }
         }
 
-        void Insert (int timestamp, int price)
+        static void Insert (SortedDictionary<int, int> prices, int timestamp, int price)
         {
             Logger.Info ($"Inserting {price} into {timestamp}");
-            _prices[timestamp] = price;
+            prices[timestamp] = price;
         }
 
-        int Query (int tstart, int tend)
+        int Query (SortedDictionary<int, int> prices, int tstart, int tend)
         {
             Logger.Info ($"Querying {tstart} <= T <= {tend}...");
 
@@ -68,7 +68,7 @@ namespace Protohackers
             int sum = 0;
             int count = 0;
 
-            foreach (var kv in _prices)
+            foreach (var kv in prices)
             {
                 if (kv.Key < tstart)
                     continue;
@@ -86,6 +86,8 @@ namespace Protohackers
         void HandleClient (TcpClient client, CancellationToken ct)
         {
             Logger.Indent ();
+
+            SortedDictionary<int, int> prices = new SortedDictionary<int, int> ();
 
             while (client.Connected && !ct.IsCancellationRequested)
             {
@@ -106,8 +108,8 @@ namespace Protohackers
 
                     switch (cmd)
                     {
-                        case 'I': Insert (arg1, arg2); break;
-                        case 'Q': WriteResponse (Query (arg1, arg2), client); break;
+                        case 'I': Insert (prices, arg1, arg2); break;
+                        case 'Q': WriteResponse (Query (prices, arg1, arg2), client); break;
                     }
                 }
             }
@@ -116,7 +118,6 @@ namespace Protohackers
 
             if (client.Connected)
             {
-                Logger.Debug ($"Closing connection to {client.Client.RemoteEndPoint}...");
                 client.Close ();
             }
         }
@@ -220,8 +221,6 @@ namespace Protohackers
         {
             this.IsRunning = false;
         }
-
-        readonly SortedDictionary<int, int> _prices = new SortedDictionary<int, int> ();
 
         readonly IPEndPoint _endpoint;
         readonly List<Task> _runningTasks = new List<Task> (MAX_TASKS);
