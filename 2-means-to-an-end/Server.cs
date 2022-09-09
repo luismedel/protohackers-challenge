@@ -131,13 +131,21 @@ namespace Protohackers
             {
                 var read = client.GetStream ().Read (buffer, offset, PACKET_SIZE - offset);
                 if (read == 0)
+                {
+                    Logger.Debug ($"No more data");
+                    if (offset != 0)
+                        Logger.Debug ($"Discarding {PACKET_SIZE - offset} bytes");
                     yield break;
+                }
 
                 if (read < PACKET_SIZE)
                 {
+                    Logger.Debug ($"Partial packet read: {read} bytes");
                     offset += read;
                     continue;
                 }
+
+                Logger.Debug ("Full packet read");
 
                 yield return buffer;
                 offset = 0;
